@@ -1,18 +1,48 @@
-name: Open pull request and echo its number
+# This is a human-readable name for your action, shown in the "Actions" tab
+name: Create Pull Request
+
+# This section defines the trigger for the action
+on:
+  # Run this workflow on every 'push' event
+  push:
+    # But, DO NOT run this workflow for pushes to the 'main' or 'master' branches
+    branches-ignore:
+      - 'main'
+      - 'master'
+
+# This section defines the jobs that will run
 jobs:
-  example:
+  # We have one job, which we'll call 'create-pull-request'
+  create-pull-request:
+    # Run this job on the latest version of Ubuntu
     runs-on: ubuntu-latest
+
+    # Set the permissions this job needs.
+    # It needs to read 'contents' (to get your branch info)
+    # and write 'pull-requests' (to create the PR).
+    permissions:
+      contents: read
+      pull-requests: write
+
+    # 'steps' are the individual commands the job will run
     steps:
-      - name: Open PR
-        id: open_pr
-        uses: rematocorp/open-pull-request-action@v1
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          from-branch: change_this
-          to-branch: change_this
-          repository-owner: change_this
-          repository: change_this
-          
-      - name: Echo mergeable PR number
-        run: echo ${{ steps.open_pr.outputs.pull_number }}
-    
+      # Step 1: Get the name of the branch that was just pushed
+      # The 'github.ref_name' variable holds this, and we store it in an 'env' variable.
+      - name: Get branch name
+        run: echo "BRANCH_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
+
+      # Step 2: Create the Pull Request using the GitHub CLI (gh)
+      - name: Create Pull Request
+        # This 'env' block makes the GITHUB_TOKEN available to the 'gh' command
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # The 'gh pr create' command does all the work.
+          # We use '|| true' at the end to prevent the workflow from
+          # failing if the pull request already exists.
+          gh pr create \
+            --base master \
+            --head ${{ env.BRANCH_NAME }} \
+            --title "PR for ${{ env.BRANCH_NAME }}" \
+            --body "Auto-generated PR for branch: ${{ env.BRANCH_NAME }}" \
+            || true
