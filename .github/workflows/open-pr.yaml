@@ -26,10 +26,11 @@ jobs:
 
     # 'steps' are the individual commands the job will run
     steps:
-      # Step 1: Get the name of the branch that was just pushed
-      # The 'github.ref_name' variable holds this, and we store it in an 'env' variable.
-      - name: Get branch name
-        run: echo "BRANCH_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
+      # *** ADDED THIS STEP ***
+      # Step 1: Check out the repository's code onto the runner
+      # This is necessary for the 'gh' command to find the .git directory
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       # Step 2: Create the Pull Request using the GitHub CLI (gh)
       - name: Create Pull Request
@@ -40,9 +41,10 @@ jobs:
           # The 'gh pr create' command does all the work.
           # We use '|| true' at the end to prevent the workflow from
           # failing if the pull request already exists.
+          # We use 'github.ref_name' to get the branch name directly.
           gh pr create \
             --base master \
-            --head ${{ env.BRANCH_NAME }} \
-            --title "PR for ${{ env.BRANCH_NAME }}" \
-            --body "Auto-generated PR for branch: ${{ env.BRANCH_NAME }}" \
+            --head ${{ github.ref_name }} \
+            --title "PR for ${{ github.ref_name }}" \
+            --body "Auto-generated PR for branch: ${{ github.ref_name }}" \
             || true
